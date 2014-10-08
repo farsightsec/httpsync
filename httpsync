@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+import argparse
+import getpass
+import os
+import tempfile
+
+import librsync
+import requests
+
+def main():
+    parser = argparse.ArgumentParser(description='HTTP Sync Client (uses librsync)')
+    parser.add_argument('--user','-u', help='Username.')
+    parser.add_argument('--password','-p', help='Password.')
+    parser.add_argument('url', help='URL to sync from.')
+    parser.add_argument('file', help='Path to sync to.')
+    args = parser.parse_args()
+
+    auth=None
+    if args.user and args.password:
+        auth=(args.user, args.password)
+    elif args.user:
+        auth=(args.user, getpass.getpass())
+    elif args.password:
+        auth=('', args.password)
+
+    if os.path.exists(args.file) and os.stat(args.file).st_size:
+        orig = open(args.file)
+        signature = librsync.signature(orig).read()
+
+        r = requests.post(args.url, data=signature, verify=False, auth=auth)
+        r.raise_for_status()
+
+        delta = tempfile.TemporaryFile()
+        delta.write(r.content)
+        delta.seek(0)
+
+        synced = tempfile.NamedTemporaryFile(prefix='.{}'.format(args.file), dir=os.path.dirname(args.file))
+        orig.seek(0)
+        librsync.patch(orig, delta, synced)
+        synced.file.close()
+        os.rename(synced.name, args.file)
+        synced.delete = False
+    else:
+        r = requests.get(args.url, verify=False, auth=auth)
+        r.raise_for_status()
+
+        output = tempfile.NamedTemporaryFile(prefix='.{}'.format(args.file), dir=os.path.dirname(args.file))
+        output.write(r.content)
+        output.file.close()
+        os.rename(output.name, args.file)
+        output.delete = False
+
+if __name__ == "__main__":
+    main()
