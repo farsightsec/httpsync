@@ -35,7 +35,7 @@ def main():
         delta.write(r.content)
         delta.seek(0)
 
-        synced = tempfile.NamedTemporaryFile(prefix='.{}'.format(args.file), dir=os.path.dirname(args.file))
+        synced = tempfile.NamedTemporaryFile(prefix='.{0}'.format(args.file), dir=os.path.dirname(args.file))
         orig.seek(0)
         librsync.patch(orig, delta, synced)
         synced.file.close()
@@ -45,7 +45,7 @@ def main():
         r = requests.get(args.url, verify=False, auth=auth)
         r.raise_for_status()
 
-        output = tempfile.NamedTemporaryFile(prefix='.{}'.format(args.file), dir=os.path.dirname(args.file))
+        output = tempfile.NamedTemporaryFile(prefix='.{0}'.format(args.file), dir=os.path.dirname(args.file))
         output.write(r.content)
         output.file.close()
         os.rename(output.name, args.file)
